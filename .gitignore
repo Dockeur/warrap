@@ -1,0 +1,12 @@
+# Général
+node_modules/
+*.log
+*.swp
+*.tmp
+
+# Spécifique à votre projet (ajoutez d'autres lignes si nécessaire)
+# Exemple pour un projet React :
+build/
+dist/
+
+ 

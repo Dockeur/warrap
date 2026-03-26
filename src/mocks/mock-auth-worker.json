@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "message": "Connexion réussie",
+  "data": {
+    "user": {
+      "id": 2,
+      "name": "Marie Kamdem",
+      "email": "worker@example.com",
+      "role": "worker",
+      "phone": "+237 6 77 89 01 23",
+      "avatar": "https://ui-avatars.com/api/?name=Marie+Kamdem&background=16A34A&color=fff",
+      "status": "active",
+      "created_at": "2024-01-20T14:15:00Z",
+      "updated_at": "2024-01-27T09:45:00Z",
+      "permissions": [
+        "view_assigned_tasks",
+        "update_task_status",
+        "view_own_reports",
+        "submit_timesheet",
+        "view_schedule"
+      ],
+      "department": "Operations",
+      "position": "Ouvrier Qualifié",
+      "supervisor_id": 1,
+      "supervisor_name": "Jean Dupont"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwibmFtZSI6Ik1hcmllIEthbWRlbSIsInJvbGUiOiJ3b3JrZXIiLCJpYXQiOjE3MDYzNDU0MDAsImV4cCI6MTcwNjM0OTAwMH0.mockTokenForWorkerUser987654321"
+  }
+}

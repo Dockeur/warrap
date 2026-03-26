@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "message": "Connexion réussie",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Jean Dupont",
+      "email": "engineer@example.com",
+      "role": "engineer",
+      "phone": "+237 6 90 12 34 56",
+      "avatar": "https://ui-avatars.com/api/?name=Jean+Dupont&background=0D8ABC&color=fff",
+      "status": "active",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-27T08:20:00Z",
+      "permissions": [
+        "view_projects",
+        "create_projects",
+        "edit_projects",
+        "view_reports",
+        "create_reports",
+        "manage_workers",
+        "view_analytics"
+      ],
+      "department": "Engineering",
+      "position": "Ingénieur Senior"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkplYW4gRHVwb250Iiwicm9sZSI6ImVuZ2luZWVyIiwiaWF0IjoxNzA2MzQ1NDAwLCJleHAiOjE3MDYzNDkwMDB9.mockTokenForEngineerUser123456789"
+  }
+}
