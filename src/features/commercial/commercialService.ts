@@ -152,7 +152,7 @@ const commercialService = {
 
   // ── PROJETS PUBLICS ──────────────────────────────────────────────────────────
   getPublishedProjects: async (): Promise<PublicProject[]> => {
-    const response = await axios.get(`${API_URL}/projects`, {
+    const response = await axios.get(`${API_URL}/projects/commercial/sold`, {
       headers: getAuthHeaders(),
     });
     const raw = response.data;
@@ -182,7 +182,10 @@ getMyCommissions: async (): Promise<Commission[]> => {
     headers: getAuthHeaders(),
   });
   const raw = response.data;
-  return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+  console.log("tous mes data", Array.isArray(raw) ? raw : Array.isArray(raw) ? raw : []);
+  
+  // return Array.isArray(raw) ? raw : Array.isArray(raw) ? raw : [];
+  return raw;
 },
 
   // Réponse API :

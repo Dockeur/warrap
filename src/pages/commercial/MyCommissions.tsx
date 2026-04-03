@@ -80,6 +80,8 @@ const MyCommissions: React.FC = () => {
       const res = await commercialService.getMyCommissions();
       setCommissions(res.data ?? []);
       setSummary(res.summary ?? null);
+      console.log("commission", commissions);
+      
     } catch (e) {
       console.error('Erreur commissions:', e);
     } finally {
