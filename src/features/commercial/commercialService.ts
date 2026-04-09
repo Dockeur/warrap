@@ -152,12 +152,12 @@ const commercialService = {
 
   // ── PROJETS PUBLICS ──────────────────────────────────────────────────────────
   getPublishedProjects: async (): Promise<PublicProject[]> => {
-    const response = await axios.get(`${API_URL}/projects/commercial/sold`, {
+    const response = await axios.get(`${API_URL}/projects/commercial/my-projects`, {
       headers: getAuthHeaders(),
     });
     const raw = response.data;
     const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-    return arr.filter((p: any) => p.status === 'published' || p.accepted);
+    return arr;
   },
 
   getProjectById: async (id: number): Promise<PublicProject> => {

@@ -1,32 +1,432 @@
-// src/pages/engineer/WorkerProfile.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft } from 'react-icons/fi';
+import { toast } from 'react-toastify';
+import {
+    FiUpload, FiUser, FiFileText, FiCheck, FiArrowRight,
+    FiEdit2, FiMail, FiPhone, FiMapPin, FiBriefcase,
+    FiStar, FiClock, FiShield, FiLoader,
+} from 'react-icons/fi';
+import workerService, { UserProfile } from '../../features/worker/workerService';
+
+const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
+    pending:  { label: 'En attente',  cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+    approved: { label: 'Approuvé',    cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    rejected: { label: 'Rejeté',      cls: 'bg-red-100 text-red-700 border-red-200' },
+    active:   { label: 'Actif',       cls: 'bg-blue-100 text-blue-700 border-blue-200' },
+};
+
+const FileUploadField = ({
+    label, id, file, onChange, accept = '.pdf', required = false, error,
+}: {
+    label: string; id: string; file: File | null;
+    onChange: (f: File | null) => void;
+    accept?: string; required?: boolean; error?: string;
+}) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+            {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <input
+            type="file"
+            id={id}
+            accept={accept}
+            className="hidden"
+            onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f && accept === '.pdf' && f.type !== 'application/pdf') {
+                    toast.error('Seuls les fichiers PDF sont acceptés');
+                    return;
+                }
+                onChange(f);
+            }}
+        />
+        <label
+            htmlFor={id}
+            className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                error
+                    ? 'border-red-400 bg-red-50'
+                    : file
+                    ? 'border-green-400 bg-green-50'
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+            }`}
+        >
+            {file
+                ? <FiCheck className="w-5 h-5 text-green-500 shrink-0" />
+                : <FiUpload className="w-5 h-5 text-gray-400 shrink-0" />}
+            <span className={`text-sm truncate ${file ? 'text-green-700 font-medium' : 'text-gray-400'}`}>
+                {file ? file.name : 'Choisir un fichier'}
+            </span>
+        </label>
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+);
+
+const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string | number | null }) => (
+    value != null && value !== '' ? (
+        <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                <Icon className="w-4 h-4 text-blue-500" />
+            </div>
+            <div>
+                <p className="text-xs text-gray-400">{label}</p>
+                <p className="text-sm font-semibold text-gray-900">{value}</p>
+            </div>
+        </div>
+    ) : null
+);
 
 const WorkerProfile: React.FC = () => {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <FiArrowLeft />
-        Retour
-      </button>
-      
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Profil du Travailleur</h1>
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-600 mb-4">Page en construction...</p>
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
-          <p className="text-sm text-blue-700">
-            👤 Ici vous verrez le profil complet d'un travailleur avec toutes ses informations.
-          </p>
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [loadingProfile, setLoadingProfile] = useState(true);
+    const [editMode, setEditMode] = useState(false);
+
+    const [profil, setProfil] = useState<File | null>(null);
+    const [yearsOfExperience, setYearsOfExperience] = useState(0);
+    const [presentation, setPresentation] = useState('');
+
+    const [commercialRegister, setCommercialRegister] = useState<File | null>(null);
+    const [immigrationCertificate, setImmigrationCertificate] = useState<File | null>(null);
+    const [certificateOfCompliance, setCertificateOfCompliance] = useState<File | null>(null);
+    const [approval, setApproval] = useState<File | null>(null);
+    const [patent, setPatent] = useState<File | null>(null);
+
+    const [registrationDocument, setRegistrationDocument] = useState<File | null>(null);
+    const [purchaseInvoice, setPurchaseInvoice] = useState<File | null>(null);
+    const [lastGearReport, setLastGearReport] = useState<File | null>(null);
+
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
+
+    const isEngin      = profile?.user_type === 'engin';
+    const isEnterprise = !isEngin && !!profile?.account?.is_enterprise;
+    const isIncomplete = !profile?.profil;
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            setLoadingProfile(true);
+            try {
+                const data = await workerService.getUserProfile();
+                setProfile(data);
+                setYearsOfExperience(data.account?.years_of_experience ?? 0);
+                setPresentation(data.account?.presentation ?? '');
+                if (isIncomplete) setEditMode(true);
+            } catch (err: any) {
+                toast.error(err.message || 'Erreur lors du chargement du profil');
+            } finally {
+                setLoadingProfile(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    useEffect(() => {
+        if (profile && !profile.profil) setEditMode(true);
+    }, [profile]);
+
+    const validate = () => {
+        const e: Record<string, string> = {};
+        if (!profil) e.profil = 'La photo de profil est requise';
+        if (isEngin) {
+            if (!registrationDocument) e.registrationDocument = "Document d'immatriculation requis";
+            if (!purchaseInvoice) e.purchaseInvoice = "Facture d'achat requise";
+            if (!lastGearReport) e.lastGearReport = 'Dernier rapport de contrôle requis';
+        }
+        if (isEnterprise) {
+            if (!commercialRegister) e.commercialRegister = 'Registre de commerce requis';
+            if (!immigrationCertificate) e.immigrationCertificate = "Certificat d'immigration requis";
+            if (!certificateOfCompliance) e.certificateOfCompliance = 'Certificat de conformité requis';
+        }
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validate()) return;
+        setSubmitting(true);
+        try {
+            if (isEngin) {
+                await workerService.completeEnginProfile({
+                    profil: profil!,
+                    registration_document: registrationDocument!,
+                    purchase_invoice: purchaseInvoice!,
+                    last_gear_report: lastGearReport!,
+                });
+            } else {
+                await workerService.completeWorkerProfile({
+                    profil: profil!,
+                    years_of_experience: yearsOfExperience,
+                    presentation,
+                    ...(isEnterprise && {
+                        commercial_register: commercialRegister,
+                        immigration_certificate: immigrationCertificate,
+                        certificate_of_compliance: certificateOfCompliance,
+                    }),
+                    ...(approval && { approval }),
+                    ...(patent && { patent }),
+                });
+            }
+            toast.success('Profil mis à jour avec succès !');
+            const refreshed = await workerService.getUserProfile();
+            setProfile(refreshed);
+            setEditMode(false);
+        } catch (err: any) {
+            toast.error(err.message || 'Erreur lors de la mise à jour');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const inputCls  = "w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+    const labelCls  = "block text-sm font-medium text-gray-700 mb-1";
+    const sectionHd = "text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2 mb-4";
+
+    if (loadingProfile) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <div className="text-center">
+                    <FiLoader className="animate-spin w-10 h-10 text-blue-600 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">Chargement du profil...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const status = STATUS_STYLE[profile?.account?.account_status ?? ''] ?? STATUS_STYLE['pending'];
+    const fullName = `${profile?.contact?.firstName ?? ''} ${profile?.contact?.lastName ?? ''}`.trim();
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-10 px-4">
+            <div className="max-w-3xl mx-auto space-y-6">
+
+                {/* ─── CARTE PROFIL ─── */}
+                {profile && !editMode && (
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                        <div className="h-24 bg-gradient-to-r from-blue-600 to-indigo-600" />
+                        <div className="px-8 pb-8">
+                            <div className="flex items-end justify-between -mt-12 mb-5">
+                                <div className="relative">
+                                    {profile.profil ? (
+                                        <img
+                                            src={profile.profil}
+                                            alt={fullName}
+                                            className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg"
+                                        />
+                                    ) : (
+                                        <div className="w-24 h-24 rounded-2xl bg-gray-200 border-4 border-white shadow-lg flex items-center justify-center">
+                                            <FiUser className="w-10 h-10 text-gray-400" />
+                                        </div>
+                                    )}
+                                    {!profile.profil && (
+                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">!</span>
+                                        </span>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setEditMode(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                >
+                                    <FiEdit2 className="w-4 h-4" />
+                                    Modifier le profil
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                <h1 className="text-2xl font-black text-gray-900">
+                                    {fullName || 'Nom non renseigné'}
+                                </h1>
+                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.cls}`}>
+                                    {status.label}
+                                </span>
+                                {profile.roles?.length > 0 && (
+                                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 capitalize">
+                                        {profile.roles[0]}
+                                    </span>
+                                )}
+                            </div>
+
+                            {profile.account && (
+                                <p className="text-sm text-gray-500 mb-6 capitalize">
+                                    {profile.account.child_lot_name}
+                                    {profile.account.parent_lot_name ? ` · ${profile.account.parent_lot_name}` : ''}
+                                </p>
+                            )}
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <InfoRow icon={FiMail}      label="Email"         value={profile.contact?.email} />
+                                <InfoRow icon={FiPhone}     label="Téléphone"     value={profile.contact?.phoneNumber} />
+                                <InfoRow icon={FiMapPin}    label="Localisation"  value={profile.contact?.localisation} />
+                                <InfoRow icon={FiClock}     label="Membre depuis" value={profile.created_at ? new Intl.DateTimeFormat('fr', { dateStyle: 'long' }).format(new Date(profile.created_at)) : null} />
+                                {!isEngin && profile.account && (
+                                    <>
+                                        <InfoRow icon={FiBriefcase} label="Expérience"    value={profile.account.years_of_experience ? `${profile.account.years_of_experience} an${profile.account.years_of_experience > 1 ? 's' : ''}` : null} />
+                                        <InfoRow icon={FiShield}    label="Entreprise"    value={profile.account.is_enterprise ? 'Oui' : 'Non'} />
+                                    </>
+                                )}
+                            </div>
+
+                            {!isEngin && profile.account?.presentation && (
+                                <div className="mt-5 pt-5 border-t border-gray-100">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-2">
+                                        <FiStar className="w-3.5 h-3.5" /> Présentation
+                                    </p>
+                                    <p className="text-sm text-gray-700 leading-relaxed">{profile.account.presentation}</p>
+                                </div>
+                            )}
+
+                            {!profile.profil && (
+                                <div className="mt-5 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                                    <p className="text-sm text-orange-800 font-medium">
+                                        ⚠️ Votre profil est incomplet. Ajoutez votre photo et vos documents pour être visible.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── FORMULAIRE COMPLÉTION / MODIFICATION ─── */}
+                {editMode && (
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    {profile?.profil ? 'Modifier le profil' : 'Compléter le profil'}
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-0.5">
+                                    {isEngin
+                                        ? 'Ajoutez vos documents pour votre engin'
+                                        : 'Complétez vos informations professionnelles'}
+                                </p>
+                            </div>
+                            {profile?.profil && (
+                                <button
+                                    onClick={() => { setEditMode(false); setErrors({}); }}
+                                    className="text-sm text-gray-500 hover:text-gray-700 font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                                >
+                                    Annuler
+                                </button>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="p-8 space-y-7">
+
+                            <div>
+                                <p className={sectionHd}><FiUser className="w-3.5 h-3.5" /> Photo de profil</p>
+                                <FileUploadField
+                                    label="Photo de profil"
+                                    id="profil"
+                                    file={profil}
+                                    onChange={setProfil}
+                                    accept="image/*"
+                                    required
+                                    error={errors.profil}
+                                />
+                                {profile?.profil && !profil && (
+                                    <div className="mt-3 flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                        <img src={profile.profil} alt="actuelle" className="w-12 h-12 rounded-lg object-cover" />
+                                        <p className="text-xs text-gray-500">Photo actuelle — laissez vide pour la conserver</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {!isEngin && (
+                                <div className="space-y-4">
+                                    <p className={sectionHd}><FiFileText className="w-3.5 h-3.5" /> Informations professionnelles</p>
+                                    <div>
+                                        <label className={labelCls}>Années d'expérience</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="50"
+                                            value={yearsOfExperience}
+                                            onChange={(e) => setYearsOfExperience(parseInt(e.target.value) || 0)}
+                                            className={inputCls}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}>Présentation professionnelle</label>
+                                        <textarea
+                                            value={presentation}
+                                            onChange={(e) => setPresentation(e.target.value)}
+                                            rows={4}
+                                            className={inputCls + ' resize-none'}
+                                            placeholder="Parlez de votre expérience, vos compétences, vos réalisations..."
+                                        />
+                                        <p className="mt-1 text-xs text-gray-400">{presentation.length} caractère{presentation.length !== 1 ? 's' : ''}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isEngin && (
+                                <div className="space-y-4">
+                                    <p className={sectionHd + ' text-orange-500'}><FiFileText className="w-3.5 h-3.5" /> Documents de l'engin (PDF)</p>
+                                    <div className="p-5 bg-orange-50 border border-orange-200 rounded-xl space-y-4">
+                                        <FileUploadField label="Document d'immatriculation" id="registration_document" file={registrationDocument} onChange={setRegistrationDocument} required error={errors.registrationDocument} />
+                                        <FileUploadField label="Facture d'achat"             id="purchase_invoice"       file={purchaseInvoice}        onChange={setPurchaseInvoice}        required error={errors.purchaseInvoice} />
+                                        <FileUploadField label="Dernier rapport de contrôle" id="last_gear_report"        file={lastGearReport}         onChange={setLastGearReport}         required error={errors.lastGearReport} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {isEnterprise && (
+                                <div className="space-y-4">
+                                    <p className={sectionHd + ' text-blue-500'}><FiFileText className="w-3.5 h-3.5" /> Documents entreprise (PDF)</p>
+                                    <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl space-y-4">
+                                        <FileUploadField label="Registre de commerce"       id="commercial_register"       file={commercialRegister}       onChange={setCommercialRegister}       required error={errors.commercialRegister} />
+                                        <FileUploadField label="Certificat d'immigration"   id="immigration_certificate"   file={immigrationCertificate}   onChange={setImmigrationCertificate}   required error={errors.immigrationCertificate} />
+                                        <FileUploadField label="Certificat de conformité"   id="certificate_of_compliance" file={certificateOfCompliance}  onChange={setCertificateOfCompliance}  required error={errors.certificateOfCompliance} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isEngin && (
+                                <div className="space-y-4">
+                                    <p className={sectionHd}><FiFileText className="w-3.5 h-3.5" /> Documents optionnels</p>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <FileUploadField label="Agrément" id="approval" file={approval} onChange={setApproval} />
+                                        <FileUploadField label="Brevet"   id="patent"   file={patent}   onChange={setPatent} />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                {!profile?.profil && (
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/dashboard')}
+                                        className="flex-1 py-3 text-sm font-semibold text-gray-600 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                                    >
+                                        Passer pour l'instant
+                                    </button>
+                                )}
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="flex-1 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                            </svg>
+                                            Envoi en cours...
+                                        </>
+                                    ) : (
+                                        <>{profile?.profil ? 'Enregistrer les modifications' : 'Compléter mon profil'} <FiArrowRight className="w-4 h-4" /></>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default WorkerProfile;

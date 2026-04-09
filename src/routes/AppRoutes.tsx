@@ -318,9 +318,9 @@ const AppRoutes: React.FC = () => {
         />
 
         <Route
-          path={ROUTES.ENGINEER_WORKER_PROFILE}
+          path="/engineer/workers/:id"
           element={
-            <ProtectedRoute allowedRoles={['corrector', 'validator', 'admin', 'manager']}>
+            <ProtectedRoute allowedRoles={['corrector', 'validator', 'admin', 'manager', 'user']}>
               <MainLayout>
                 <WorkerProfile />
               </MainLayout>

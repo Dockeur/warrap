@@ -12,13 +12,13 @@ import { ROUTES } from '../../utils/constants';
 import { logout } from '../../features/auth/authSlice';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const dispatch    = useAppDispatch();
-  const navigate    = useNavigate();
-  const location    = useLocation();
-  const { user }    = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAppSelector((state) => state.auth);
   const { unreadCount } = useAppSelector((state) => state.notifications);
 
-  const [sidebarOpen,   setSidebarOpen]   = React.useState(true);
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [mobileSidebar, setMobileSidebar] = React.useState(false);
 
   const handleLogout = () => {
@@ -29,86 +29,85 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const role = user?.role;
 
   const dashboardRoute =
-    role === 'admin'        ? ROUTES.ADMIN_DASHBOARD
-    : role === 'user'       ? ROUTES.WORKER_DASHBOARD
-    : role === 'commercial' ? '/commercial/dashboard'
-    : ROUTES.ENGINEER_DASHBOARD;
+    role === 'admin' ? ROUTES.ADMIN_DASHBOARD
+      : role === 'user' ? ROUTES.WORKER_DASHBOARD
+        : role === 'commercial' ? '/commercial/dashboard'
+          : ROUTES.ENGINEER_DASHBOARD;
 
-  // ── Icon map ──────────────────────────────────────────────────────────────
   const iconMap: Record<string, React.ReactNode> = {
-    'Dashboard':      <FiGrid size={18} />,
-    'Travailleurs':   <FiUsers size={18} />,
+    'Dashboard': <FiGrid size={18} />,
+    'Travailleurs': <FiUsers size={18} />,
     'Disponibilités': <FiCalendar size={18} />,
-    'Jobs':           <FiBriefcase size={18} />,
-    'Projets':        <FiFolder size={18} />,
-    'Mes Projets':    <FiFolder size={18} />,
-    'Utilisateurs':   <FiUsers size={18} />,
-    'Commissions':    <FiDollarSign size={18} />,
+    'Jobs': <FiBriefcase size={18} />,
+    'Projets': <FiFolder size={18} />,
+    'Mes Projets': <FiFolder size={18} />,
+    'Utilisateurs': <FiUsers size={18} />,
+    'Commissions': <FiDollarSign size={18} />,
   };
 
-  // ── Links par rôle ────────────────────────────────────────────────────────
+
   const workerLinks = [
-    { to: ROUTES.WORKER_DASHBOARD,    label: 'Dashboard'      },
+    { to: ROUTES.WORKER_DASHBOARD, label: 'Dashboard' },
     { to: ROUTES.WORKER_AVAILABILITY, label: 'Disponibilités' },
   ];
 
   const correctorLinks = [
-    { to: ROUTES.ENGINEER_DASHBOARD,    label: 'Dashboard'    },
-    { to: ROUTES.ENGINEER_WORKERS,      label: 'Travailleurs' },
-    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Mes Projets'  },
+    { to: ROUTES.ENGINEER_DASHBOARD, label: 'Dashboard' },
+    { to: ROUTES.ENGINEER_WORKERS, label: 'Travailleurs' },
+    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Mes Projets' },
   ];
 
   const validatorLinks = [
-    { to: ROUTES.ENGINEER_DASHBOARD,    label: 'Dashboard'    },
-    { to: ROUTES.ENGINEER_WORKERS,      label: 'Travailleurs' },
-    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Projets'      },
+    { to: ROUTES.ENGINEER_DASHBOARD, label: 'Dashboard' },
+    { to: ROUTES.ENGINEER_WORKERS, label: 'Travailleurs' },
+    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Projets' },
   ];
 
   const managerLinks = [
-    { to: ROUTES.ENGINEER_DASHBOARD,    label: 'Dashboard'      },
-    { to: ROUTES.ENGINEER_WORKERS,      label: 'Travailleurs'   },
-    { to: ROUTES.WORKER_AVAILABILITY,   label: 'Disponibilités' },
-    { to: ROUTES.ADMIN_JOBS,            label: 'Projets Lancés'           },
+    { to: ROUTES.ENGINEER_DASHBOARD, label: 'Dashboard' },
+    { to: ROUTES.ENGINEER_WORKERS, label: 'Travailleurs' },
+    { to: ROUTES.WORKER_AVAILABILITY, label: 'Disponibilités' },
+    { to: ROUTES.ADMIN_JOBS, label: 'Projets Lancés' },
   ];
 
   const adminLinks = [
-    { to: ROUTES.ADMIN_DASHBOARD,       label: 'Dashboard'    },
+    { to: ROUTES.ADMIN_DASHBOARD, label: 'Dashboard' },
     { to: ROUTES.ADMIN_USER_MANAGEMENT, label: 'Utilisateurs' },
-    { to: ROUTES.ADMIN_JOBS,            label: 'Projets Lancés'         },
-    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Projets'      },
+    { to: ROUTES.ADMIN_JOBS, label: 'Projets Lancés' },
+    { to: ROUTES.ENGINEER_LIST_PROJECT, label: 'Projets' },
   ];
 
   const commercialLinks = [
-    { to: '/commercial/dashboard',   label: 'Dashboard'   },
-    { to: '/commercial/projects',    label: 'Projets'     },
+    { to: '/commercial/dashboard', label: 'Dashboard' },
+    { to: '/commercial/projects', label: 'Projets' },
     { to: '/commercial/commissions', label: 'Commissions' },
   ];
 
   const getLinks = () => {
     switch (role) {
-      case 'admin':      return adminLinks;
-      case 'validator':  return validatorLinks;
-      case 'manager':    return managerLinks;
-      case 'corrector':  return correctorLinks;
+      case 'admin': return adminLinks;
+      case 'validator': return validatorLinks;
+      case 'manager': return managerLinks;
+      case 'corrector': return correctorLinks;
       case 'commercial': return commercialLinks;
-      default:           return workerLinks;
+      default: return workerLinks;
     }
   };
 
   const links = getLinks();
 
-  // ── Badge ─────────────────────────────────────────────────────────────────
+
   const roleBadge: Record<string, { label: string; color: string }> = {
-    admin:      { label: 'Admin',      color: 'bg-red-100 text-red-700'       },
-    validator:  { label: 'Validator',  color: 'bg-purple-100 text-purple-700' },
-    manager:    { label: 'Manager',    color: 'bg-purple-100 text-purple-700' },
-    corrector:  { label: 'Corrector',  color: 'bg-blue-100 text-blue-700'     },
+    admin: { label: 'Admin', color: 'bg-red-100 text-red-700' },
+    validator: { label: 'Validator', color: 'bg-purple-100 text-purple-700' },
+    manager: { label: 'Manager', color: 'bg-purple-100 text-purple-700' },
+    corrector: { label: 'Corrector', color: 'bg-blue-100 text-blue-700' },
     commercial: { label: 'Commercial', color: 'bg-orange-100 text-orange-700' },
-    user:       { label: 'Technicien', color: 'bg-green-100 text-green-700'   },
+    user: { label: 'Technicien', color: 'bg-green-100 text-green-700' },
   };
   const badge = role ? roleBadge[role] : null;
 
-  // ── Active link helper ────────────────────────────────────────────────────
+
   const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/');
 
   // ── Sidebar component (shared desktop & mobile) ───────────────────────────
@@ -166,8 +165,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Bottom user card */}
       <div className="border-t border-gray-100 p-3">
+
         <Link
-          to={ROUTES.PROFILE}
+          to={`/engineer/workers/${user?.id}`}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 transition-colors group"
         >
           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">
@@ -297,8 +297,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <button className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors">
                   <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center
                     text-white font-bold text-sm flex-shrink-0">
-                    {user?.contact?.firstName?.[0]}
-                    {user?.contact?.lastName?.[0]}
+                    {user.profil ? (
+                      <img
+                        src={user.profil}
+                        alt={user.contact.fullName}
+                        className="object-cover h-full w-full rounded-2xl object-cover border-4 border-white shadow-lg"
+                      />
+                    ) : null}
                   </div>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-semibold text-gray-800 leading-tight">
@@ -323,7 +328,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </p>
                   </div>
                   <Link
-                    to={ROUTES.PROFILE}
+                    to={`/engineer/workers/${user?.id}`}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <FiUser size={15} />
