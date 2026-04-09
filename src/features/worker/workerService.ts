@@ -99,32 +99,46 @@ export interface MyProject {
 
 export interface UserProfile {
     id: number;
-    email: string;
+    email: string | null;
     user_type: 'worker' | 'engin';
     profil: string | null;
+    nationalIDCard: string | null;
     roles: string[];
     privacy_policy: boolean;
     created_at: string;
     account: {
-        child_lot_name: string;
-        parent_lot_name: string;
+        child_lot_name: string | null;
+        parent_lot_name: string | null;
         all_lots: any[];
         is_enterprise: boolean;
         years_of_experience: number;
-        presentation: string;
+        presentation: string | null;
         account_status: string;
     } | null;
     contact: {
         firstName: string;
         lastName: string;
         phoneNumber: string;
-        email: string;
-        localisation: string;
+        email: string | null;
+        localisation: string | null;
+    } | null;
+    enterprise_documents?: {
+        commercial_register: string | null;
+        immigration_certificate: string | null;
+        certificate_of_compliance: string | null;
+        approval: string | null;
+        patent: string | null;
+    } | null;
+    engin_documents?: {
+        registration_document: string | null;
+        purchase_invoice: string | null;
+        last_gear_report: string | null;
     } | null;
 }
 
 export interface CompleteWorkerProfileData {
     profil: File;
+    nationalIDCard: File;
     years_of_experience?: number;
     presentation?: string;
     commercial_register?: File | null;
@@ -136,6 +150,7 @@ export interface CompleteWorkerProfileData {
 
 export interface CompleteEnginProfileData {
     profil: File;
+    nationalIDCard: File;
     registration_document: File;
     purchase_invoice: File;
     last_gear_report: File;
@@ -243,6 +258,7 @@ const workerService = {
         try {
             const fd = new FormData();
             fd.append('profil', profileData.profil);
+            fd.append('nationalIDCard', profileData.nationalIDCard);
             if (profileData.years_of_experience !== undefined) fd.append('years_of_experience', String(profileData.years_of_experience));
             if (profileData.presentation) fd.append('presentation', profileData.presentation);
             if (profileData.commercial_register) fd.append('commercial_register', profileData.commercial_register);
@@ -261,6 +277,7 @@ const workerService = {
         try {
             const fd = new FormData();
             fd.append('profil', profileData.profil);
+            fd.append('nationalIDCard', profileData.nationalIDCard);
             fd.append('registration_document', profileData.registration_document);
             fd.append('purchase_invoice', profileData.purchase_invoice);
             fd.append('last_gear_report', profileData.last_gear_report);

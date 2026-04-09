@@ -46,7 +46,7 @@ import MyCommissions from '../pages/commercial/MyCommissions';
 
 
 const AppRoutes: React.FC = () => {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, redirectUrl } = useAppSelector((state) => state.auth);
 
   const getUserDashboard = (): string => {
     if (!user) return ROUTES.LOGIN;
@@ -64,7 +64,7 @@ const AppRoutes: React.FC = () => {
         return '/commercial/dashboard';
 
       case 'user':
-     
+
       default:
         return ROUTES.WORKER_DASHBOARD;
     }
@@ -75,7 +75,7 @@ const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-       
+
 
         <Route
           path="/"
@@ -91,12 +91,12 @@ const AppRoutes: React.FC = () => {
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/marketplace/project/:id" element={<PublicProjectDetails />} />
 
-        
+
 
         <Route
           path={ROUTES.LOGIN}
           element={
-            isAuthenticated ? (
+            isAuthenticated && !redirectUrl ? (
               <Navigate to={userDashboard} replace />
             ) : (
               <AuthLayout>
@@ -109,7 +109,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path={ROUTES.REGISTER}
           element={
-            isAuthenticated ? (
+            isAuthenticated && !redirectUrl ? (
               <Navigate to={userDashboard} replace />
             ) : (
               <AuthLayout>
@@ -128,7 +128,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-       
+
 
         <Route
           path={ROUTES.PROFILE}
@@ -152,7 +152,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-      
+
 
         <Route
           path="/commercial/dashboard"
@@ -187,7 +187,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-     
+
 
         <Route
           path={ROUTES.ADMIN_DASHBOARD}
@@ -211,7 +211,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-       
+
         <Route
           path="/admin/commissions"
           element={
@@ -223,7 +223,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-     
+
 
         <Route
           path={ROUTES.ADMIN_JOBS}
@@ -247,12 +247,12 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-       
+
 
         <Route
           path={ROUTES.WORKER_DASHBOARD}
           element={
-            <ProtectedRoute allowedRoles={['user','engin']}>
+            <ProtectedRoute allowedRoles={['user', 'engin']}>
               <MainLayout>
                 <WorkerDashboard />
               </MainLayout>
@@ -263,7 +263,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path={ROUTES.WORKER_AVAILABILITY}
           element={
-            <ProtectedRoute allowedRoles={['user', 'manager','engin']}>
+            <ProtectedRoute allowedRoles={['user', 'manager', 'engin']}>
               <MainLayout>
                 <AvailabilityCalendar />
               </MainLayout>
@@ -274,7 +274,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path={ROUTES.WORKER_APPLICATIONS}
           element={
-            <ProtectedRoute allowedRoles={['user','engin']}>
+            <ProtectedRoute allowedRoles={['user', 'engin']}>
               <MainLayout>
                 <ProjectApplications />
               </MainLayout>
@@ -285,7 +285,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path={ROUTES.WORKER_PROJECTS}
           element={
-            <ProtectedRoute allowedRoles={['user','engin']}>
+            <ProtectedRoute allowedRoles={['user', 'engin']}>
               <MainLayout>
                 <MyProjects />
               </MainLayout>
@@ -293,7 +293,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-      
+
 
         <Route
           path={ROUTES.ENGINEER_DASHBOARD}
@@ -318,7 +318,7 @@ const AppRoutes: React.FC = () => {
         />
 
         <Route
-          path="/engineer/workers/:id"
+          path="user/profil/:id"
           element={
             <ProtectedRoute allowedRoles={['corrector', 'validator', 'admin', 'manager', 'user']}>
               <MainLayout>
@@ -404,8 +404,8 @@ const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
- 
-      
+
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

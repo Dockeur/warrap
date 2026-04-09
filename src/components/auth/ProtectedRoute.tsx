@@ -1,5 +1,5 @@
 // src/components/auth/ProtectedRoute.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppSelector } from '../../store/store';
 import { ROUTES } from '../../utils/constants';
@@ -15,6 +15,8 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+
+
 
   // Non connecté → login
   if (!isAuthenticated || !user) {

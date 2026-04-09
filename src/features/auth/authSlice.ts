@@ -1,8 +1,6 @@
-// src/features/auth/authSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import authService from './authService';
 
-// Types
 interface Contact {
   id: number;
   user_id: number;
@@ -65,59 +63,46 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  redirectUrl: string | null;
 }
 
-// État initial
 const initialState: AuthState = {
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   token: localStorage.getItem('token'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
   error: null,
+  redirectUrl: null,
 };
 
-// Thunks asynchrones
-
-// Login
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
-      console.log('🔐 Tentative de connexion...');
-      
       const response = await authService.login(credentials);
-      
-      console.log('✅ Réponse reçue:', response);
-      
+
       if (!response.token || !response.user) {
-        console.error('❌ Structure de réponse invalide:', response);
         throw new Error('Réponse API invalide');
       }
-      
+
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      
-      console.log('💾 Token et user sauvegardés');
-      console.log('🔍 Type de worker:', response.user.account_type?.worker);
-      
+
       return response;
     } catch (error: any) {
-      console.error('❌ Erreur de connexion:', error);
-      
       let errorMessage = 'Erreur de connexion';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
 );
 
-// Logout
 export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
@@ -132,63 +117,55 @@ export const logout = createAsyncThunk(
   }
 );
 
-// Forgot Password
 export const forgotPassword = createAsyncThunk(
   'auth/forgotPassword',
   async (email: string, { rejectWithValue }) => {
     try {
-      console.log('📧 Demande de réinitialisation pour:', email);
       await authService.forgotPassword(email);
-      console.log('✅ Email envoyé');
       return;
     } catch (error: any) {
-      console.error('❌ Erreur:', error);
-      
-      let errorMessage = 'Erreur lors de l\'envoi';
-      
+      let errorMessage = "Erreur lors de l'envoi";
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
 );
 
-// Reset Password
 export const resetPassword = createAsyncThunk(
   'auth/resetPassword',
   async (data: { token: string; password: string }, { rejectWithValue }) => {
     try {
-      console.log('🔑 Réinitialisation...');
       await authService.resetPassword(data.token, data.password);
-      console.log('✅ Réinitialisé');
       return;
     } catch (error: any) {
-      console.error('❌ Erreur:', error);
-      
       let errorMessage = 'Erreur de réinitialisation';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
 );
 
-// Slice
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    clearRedirectUrl: (state) => {
+      state.redirectUrl = null;
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
@@ -199,22 +176,24 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+      state.redirectUrl = null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
   },
   extraReducers: (builder) => {
     builder
-      // Login
       .addCase(login.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.redirectUrl = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.redirectUrl = action.payload.redirect_url ?? null;
         state.error = null;
       })
       .addCase(login.rejected, (state, action) => {
@@ -222,10 +201,10 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.token = null;
+        state.redirectUrl = null;
         state.error = action.payload as string;
       })
-      
-      // Logout
+
       .addCase(logout.pending, (state) => {
         state.isLoading = true;
       })
@@ -234,14 +213,14 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.token = null;
+        state.redirectUrl = null;
         state.error = null;
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
-      // Forgot Password
+
       .addCase(forgotPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -254,8 +233,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
-      // Reset Password
+
       .addCase(resetPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -271,5 +249,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, clearAuth } = authSlice.actions;
+export const { clearError, clearRedirectUrl, setUser, clearAuth } = authSlice.actions;
 export default authSlice.reducer;

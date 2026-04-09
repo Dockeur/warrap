@@ -50,7 +50,7 @@ export const ROUTES = {
   ADMIN_JOBS: '/engineer/jobs',
   ENGINEER_DASHBOARD: '/engineer/dashboard',
   ENGINEER_WORKERS: '/engineer/workers',
-  ENGINEER_WORKER_PROFILE: '/engineer/workers/:id',
+  ENGINEER_WORKER_PROFILE: '/user/profil/:id',
   ENGINEER_PROJECTS: '/engineer/projects',
   ENGINEER_CREATE_PROJECT: '/engineer/projects/create',
   ENGINEER_LIST_PROJECT: '/engineer/projects/list',

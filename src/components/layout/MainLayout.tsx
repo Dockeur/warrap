@@ -328,7 +328,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </p>
                   </div>
                   <Link
-                    to={`/engineer/workers/${user?.id}`}
+                    to={`/user/profil/${user?.id}`}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <FiUser size={15} />

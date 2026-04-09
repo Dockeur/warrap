@@ -17,59 +17,62 @@ interface LoginResponse {
 
 const authService = {
   // Connexion
-  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    console.log('🔐 AuthService - Tentative de connexion');
-    console.log('📍 URL:', `${API_URL}/api/loginWorker`);
-    console.log('📤 Credentials:', { email: credentials.email });
-
-    try {
-      const response = await axios.post<LoginResponse>(
+login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const response = await axios.post<LoginResponse>(
         `${API_URL}/loginWorker`,
         credentials,
         {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            maxRedirects: 0,
+            validateStatus: (status) => status === 200 || status === 302,
         }
-      );
+    );
 
-      console.log('✅ AuthService - Réponse reçue:', response.data);
+    const data = response.data;
 
-      // L'API renvoie directement { success, message, token, user }
-      const data = response.data;
+    console.log('status:', response.status);
+    console.log('data:', data);
 
-      // Vérifier que la réponse contient les données nécessaires
-      if (!data.token || !data.user) {
-        console.error('❌ AuthService - Structure de réponse invalide:', data);
-        throw new Error('Structure de réponse invalide');
-      }
-
-      console.log('✅ AuthService - Token:', data.token.substring(0, 20) + '...');
-      console.log('✅ AuthService - User ID:', data.user.id);
-      console.log('✅ AuthService - Worker Type:', data.user.account_type?.worker);
-
-      return data;
-    } catch (error: any) {
-      console.error('❌ AuthService - Erreur:', error);
-
-      if (error.response) {
-        console.error('❌ Erreur serveur:', error.response.data);
-        throw new Error(error.response.data.message || 'Erreur de connexion');
-      } else if (error.request) {
-        console.error('❌ Pas de réponse du serveur');
-        throw new Error('Impossible de contacter le serveur');
-      } else {
-        console.error('❌ Erreur:', error.message);
-        throw error;
-      }
+    if (!data.token || !data.user) {
+        throw new Error(data.message || 'Structure de réponse invalide');
     }
-  },
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+  
+    
+
+    if (response.status === 302 || data.redirect_url) {
+        let path: string;
+
+        if (data.redirect_url) {
+            path = new URL(data.redirect_url).pathname;
+        } else {
+            const locationHeader = response.headers['location'];
+            path = locationHeader
+                ? new URL(locationHeader).pathname
+                : '/edit-profile';
+        }
+    
+        
+
+        return { ...data, redirect_url: data.redirect_url };
+    }
+
+    return data;
+},
+
+
+
 
   // Inscription
   register: async (data: any): Promise<LoginResponse> => {
-    console.log('📝 AuthService - Tentative d\'inscription');
-    
+
+
     const apiData = {
       email: data.email,
       password: data.password,
@@ -91,7 +94,7 @@ const authService = {
       certifications: data.certifications || [],
     };
 
-    console.log('📤 Données envoyées:', apiData);
+
 
     try {
       const response = await axios.post<LoginResponse>(
@@ -105,11 +108,9 @@ const authService = {
         }
       );
 
-      console.log('✅ Inscription réussie:', response.data);
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erreur d\'inscription:', error);
-      
       if (error.response) {
         throw new Error(error.response.data.message || 'Erreur d\'inscription');
       } else {
@@ -123,7 +124,7 @@ const authService = {
     const token = localStorage.getItem('token');
 
     if (!token) {
-      console.log('⚠️ Pas de token, déconnexion locale uniquement');
+
       return;
     }
 
@@ -138,16 +139,15 @@ const authService = {
           },
         }
       );
-      console.log('✅ Déconnexion réussie côté serveur');
+
     } catch (error) {
-      console.error('⚠️ Erreur lors de la déconnexion côté serveur:', error);
-      // On continue quand même pour nettoyer le localStorage
+
     }
   },
 
   // Mot de passe oublié
   forgotPassword: async (email: string): Promise<void> => {
-    console.log('📧 AuthService - Demande de réinitialisation pour:', email);
+
 
     try {
       await axios.post(
@@ -161,9 +161,9 @@ const authService = {
         }
       );
 
-      console.log('✅ Email de réinitialisation envoyé');
+
     } catch (error: any) {
-      console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+
 
       if (error.response) {
         throw new Error(error.response.data.message || 'Erreur lors de l\'envoi de l\'email');
@@ -175,7 +175,7 @@ const authService = {
 
   // Réinitialiser le mot de passe
   resetPassword: async (token: string, password: string): Promise<void> => {
-    console.log('🔑 AuthService - Réinitialisation du mot de passe');
+
 
     try {
       await axios.post(
@@ -189,9 +189,9 @@ const authService = {
         }
       );
 
-      console.log('✅ Mot de passe réinitialisé avec succès');
+
     } catch (error: any) {
-      console.error('❌ Erreur lors de la réinitialisation:', error);
+
 
       if (error.response) {
         throw new Error(error.response.data.message || 'Erreur lors de la réinitialisation');
