@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import {
     FiUpload, FiUser, FiFileText, FiCheck, FiArrowRight,
     FiEdit2, FiMail, FiPhone, FiMapPin, FiBriefcase,
     FiStar, FiClock, FiShield, FiLoader, FiCreditCard,
-    FiExternalLink, FiX, FiTool,
+    FiExternalLink, FiX, FiTool, FiUsers, FiChevronDown,
 } from 'react-icons/fi';
 import { MdVerified } from 'react-icons/md';
-import workerService, { UserProfile } from '../../features/worker/workerService';
+import { AppDispatch, RootState } from '../../store/store';
+import { fetchWorkers } from '../../features/users/usersSlice';
+import workerService, { UserProfile, EnterpriseWorkerEntry } from '../../features/worker/workerService';
 
 const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
     pending:  { label: 'En attente',  cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
@@ -111,8 +114,45 @@ const SectionTitle = ({ icon: Icon, title, color = 'text-gray-400' }: {
     </p>
 );
 
+const WorkerCard = ({ worker }: { worker: EnterpriseWorkerEntry }) => (
+    <div className="flex items-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl">
+        {worker.worker_profil ? (
+            <img src={worker.worker_profil} alt={worker.worker_name ?? ''}
+                className="w-10 h-10 rounded-xl object-cover shrink-0" />
+        ) : (
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <FiUser className="w-5 h-5 text-blue-400" />
+            </div>
+        )}
+        <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-900 truncate">
+                {worker.worker_name ?? 'Sans nom'}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                {worker.worker_email && (
+                    <p className="text-xs text-gray-400 truncate flex items-center gap-1">
+                        <FiMail className="w-3 h-3 shrink-0" /> {worker.worker_email}
+                    </p>
+                )}
+                {worker.worker_phone && (
+                    <p className="text-xs text-gray-400 truncate flex items-center gap-1">
+                        <FiPhone className="w-3 h-3 shrink-0" /> {worker.worker_phone}
+                    </p>
+                )}
+                {worker.worker_lot && (
+                    <p className="text-xs text-blue-500 capitalize truncate">{worker.worker_lot}</p>
+                )}
+            </div>
+        </div>
+    </div>
+);
+
 const WorkerProfile: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate  = useNavigate();
+    const dispatch  = useDispatch<AppDispatch>();
+
+    const workers        = useSelector((state: RootState) => state.users.workers);
+    const loadingWorkers = useSelector((state: RootState) => state.users.isLoading);
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loadingProfile, setLoadingProfile] = useState(true);
@@ -132,6 +172,10 @@ const WorkerProfile: React.FC = () => {
     const [registrationDocument, setRegistrationDocument] = useState<File | null>(null);
     const [purchaseInvoice, setPurchaseInvoice] = useState<File | null>(null);
     const [lastGearReport, setLastGearReport] = useState<File | null>(null);
+
+    const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
+    const [workerSearchQuery, setWorkerSearchQuery] = useState('');
+    const [workerDropdownOpen, setWorkerDropdownOpen] = useState(false);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -159,11 +203,17 @@ const WorkerProfile: React.FC = () => {
         if (profile && !profile.profil) setEditMode(true);
     }, [profile]);
 
+    useEffect(() => {
+        if (editMode && isEnterprise) dispatch(fetchWorkers());
+    }, [editMode, isEnterprise, dispatch]);
+
     const openEdit = () => {
         setYearsOfExperience(profile?.account?.years_of_experience ?? 0);
         setPresentation(profile?.account?.presentation ?? '');
         setProfil(null);
         setNationalIDCard(null);
+        setSelectedWorkerIds([]);
+        setWorkerSearchQuery('');
         setErrors({});
         setEditMode(true);
     };
@@ -173,12 +223,27 @@ const WorkerProfile: React.FC = () => {
         setErrors({});
         setProfil(null);
         setNationalIDCard(null);
+        setSelectedWorkerIds([]);
+        setWorkerSearchQuery('');
+        setWorkerDropdownOpen(false);
+    };
+
+    const toggleWorker = (id: number) => {
+        setSelectedWorkerIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+        setErrors((prev) => { const n = { ...prev }; delete n.selectedWorkerIds; return n; });
+    };
+
+    const removeWorker = (id: number) => {
+        setSelectedWorkerIds((prev) => prev.filter((x) => x !== id));
     };
 
     const validate = () => {
         const e: Record<string, string> = {};
         if (!profil && !profile?.profil) e.profil = 'La photo de profil est requise';
         if (!nationalIDCard) e.nationalIDCard = "La carte d'identité nationale est requise";
+        if (isEnterprise && selectedWorkerIds.length === 0) e.selectedWorkerIds = 'Veuillez sélectionner au moins un travailleur';
         if (isEngin) {
             if (!registrationDocument) e.registrationDocument = "Document d'immatriculation requis";
             if (!purchaseInvoice) e.purchaseInvoice = "Facture d'achat requise";
@@ -213,6 +278,7 @@ const WorkerProfile: React.FC = () => {
                     years_of_experience: yearsOfExperience,
                     presentation,
                     ...(isEnterprise && {
+                        worker_user_ids: selectedWorkerIds.join(','),
                         commercial_register: commercialRegister,
                         immigration_certificate: immigrationCertificate,
                         certificate_of_compliance: certificateOfCompliance,
@@ -226,12 +292,23 @@ const WorkerProfile: React.FC = () => {
             setEditMode(false);
             setNationalIDCard(null);
             setProfil(null);
+            setSelectedWorkerIds([]);
+            setWorkerSearchQuery('');
         } catch (err: any) {
             toast.error(err.message || 'Erreur lors de la mise à jour');
         } finally {
             setSubmitting(false);
         }
     };
+
+    const selectedWorkersInDropdown = workers.filter((w) => selectedWorkerIds.includes(w.id));
+
+    const filteredWorkers = workers.filter((w) => {
+        const fullName = `${w.firstName ?? ''} ${w.lastName ?? ''}`.toLowerCase();
+        const email    = (w.email ?? '').toLowerCase();
+        const q        = workerSearchQuery.toLowerCase();
+        return fullName.includes(q) || email.includes(q);
+    });
 
     const inputCls = "w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
     const labelCls = "block text-sm font-medium text-gray-700 mb-1";
@@ -252,17 +329,14 @@ const WorkerProfile: React.FC = () => {
     const acc      = profile?.account;
     const ed       = profile?.enterprise_documents;
     const engD     = profile?.engin_documents;
+    const enterpriseWorkers = profile?.workers ?? [];
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-10 px-4">
             <div className="max-w-3xl mx-auto space-y-5">
 
-                {/* ══════════════════════════════════════
-                    VUE PROFIL
-                ══════════════════════════════════════ */}
                 {!editMode && profile && (
                     <>
-                        {/* ── HEADER ── */}
                         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                             <div className="h-28 bg-gradient-to-r from-blue-600 to-indigo-600 relative">
                                 {isEngin && (
@@ -330,7 +404,6 @@ const WorkerProfile: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* ── COORDONNÉES ── */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <SectionTitle icon={FiUser} title="Coordonnées" />
                             <div className="grid sm:grid-cols-2 gap-4">
@@ -341,7 +414,6 @@ const WorkerProfile: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* ── PROFIL PRO (worker individuel ou entreprise) ── */}
                         {!isEngin && acc && (
                             <div className={`bg-white rounded-2xl shadow-sm border p-6 ${isEnterprise ? 'border-blue-200' : 'border-gray-100'}`}>
                                 <div className="flex items-center justify-between mb-4">
@@ -369,13 +441,36 @@ const WorkerProfile: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── DOCUMENTS D'IDENTITÉ ── */}
+                        {isEnterprise && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <SectionTitle icon={FiUsers} title="Travailleurs" color="text-blue-600" />
+                                    <span className="text-xs font-bold px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full border border-blue-200">
+                                        {enterpriseWorkers.length} travailleur{enterpriseWorkers.length !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                {enterpriseWorkers.length === 0 ? (
+                                    <div className="flex items-center gap-3 px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl">
+                                        <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center shrink-0">
+                                            <FiUsers className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                        <p className="text-sm text-gray-400 italic">Aucun travailleur associé</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {enterpriseWorkers.map((w) => (
+                                            <WorkerCard key={w.id} worker={w} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <SectionTitle icon={FiCreditCard} title="Identité" />
                             <DocRow label="Carte d'identité nationale" url={profile.nationalIDCard} />
                         </div>
 
-                        {/* ── DOCUMENTS ENGIN ── */}
                         {isEngin && (
                             <div className="bg-white rounded-2xl shadow-sm border border-orange-200 p-6">
                                 <SectionTitle icon={FiTool} title="Documents de l'engin" color="text-orange-500" />
@@ -387,7 +482,6 @@ const WorkerProfile: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── DOCUMENTS ENTREPRISE ── */}
                         {isEnterprise && ed && (
                             <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-6">
                                 <div className="flex items-center justify-between mb-3">
@@ -404,7 +498,6 @@ const WorkerProfile: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── DOCUMENTS OPTIONNELS (worker individuel) ── */}
                         {!isEngin && !isEnterprise && ed && (
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                 <SectionTitle icon={FiFileText} title="Documents optionnels" />
@@ -417,9 +510,6 @@ const WorkerProfile: React.FC = () => {
                     </>
                 )}
 
-                {/* ══════════════════════════════════════
-                    FORMULAIRE DE MODIFICATION
-                ══════════════════════════════════════ */}
                 {editMode && (
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50">
@@ -441,6 +531,133 @@ const WorkerProfile: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-8 space-y-7">
+
+                            {isEnterprise && (
+                                <div>
+                                    <SectionTitle icon={FiUsers} title="Travailleurs concernés" color="text-blue-600" />
+                                    <label className={labelCls}>
+                                        Sélectionner les travailleurs <span className="text-red-500">*</span>
+                                    </label>
+
+                                    {selectedWorkersInDropdown.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {selectedWorkersInDropdown.map((w) => (
+                                                <span key={w.id}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded-lg border border-blue-200"
+                                                >
+                                                    {w.avatar ? (
+                                                        <img src={w.avatar} alt="" className="w-4 h-4 rounded object-cover" />
+                                                    ) : (
+                                                        <FiUser className="w-3 h-3" />
+                                                    )}
+                                                    {`${w.firstName ?? ''} ${w.lastName ?? ''}`.trim() || 'Sans nom'}
+                                                    <button type="button" onClick={() => removeWorker(w.id)}
+                                                        className="ml-0.5 hover:text-red-600 transition-colors"
+                                                    >
+                                                        <FiX className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {loadingWorkers ? (
+                                        <div className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50">
+                                            <FiLoader className="animate-spin w-4 h-4 text-blue-500 shrink-0" />
+                                            <span className="text-sm text-gray-400">Chargement des travailleurs...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setWorkerDropdownOpen((v) => !v)}
+                                                className={`w-full flex items-center justify-between px-4 py-3 border rounded-xl text-sm transition-colors text-left ${
+                                                    errors.selectedWorkerIds
+                                                        ? 'border-red-400 bg-red-50'
+                                                        : selectedWorkersInDropdown.length > 0
+                                                        ? 'border-blue-400 bg-blue-50'
+                                                        : 'border-gray-300 hover:border-blue-400'
+                                                }`}
+                                            >
+                                                <span className={selectedWorkersInDropdown.length > 0 ? 'text-blue-700 font-medium text-sm' : 'text-gray-400 text-sm'}>
+                                                    {selectedWorkersInDropdown.length > 0
+                                                        ? `${selectedWorkersInDropdown.length} travailleur${selectedWorkersInDropdown.length > 1 ? 's' : ''} sélectionné${selectedWorkersInDropdown.length > 1 ? 's' : ''}`
+                                                        : 'Choisir des travailleurs'}
+                                                </span>
+                                                <FiChevronDown className={`w-4 h-4 text-gray-400 shrink-0 ml-2 transition-transform ${workerDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {workerDropdownOpen && (
+                                                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                                                    <div className="p-2 border-b border-gray-100">
+                                                        <input
+                                                            type="text"
+                                                            autoFocus
+                                                            value={workerSearchQuery}
+                                                            onChange={(e) => setWorkerSearchQuery(e.target.value)}
+                                                            placeholder="Rechercher par nom ou email..."
+                                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                                        />
+                                                    </div>
+                                                    <div className="max-h-56 overflow-y-auto">
+                                                        {filteredWorkers.length === 0 ? (
+                                                            <div className="px-4 py-6 text-center text-sm text-gray-400">
+                                                                Aucun travailleur trouvé
+                                                            </div>
+                                                        ) : (
+                                                            filteredWorkers.map((w) => {
+                                                                const wName    = `${w.firstName ?? ''} ${w.lastName ?? ''}`.trim() || 'Sans nom';
+                                                                const isChecked = selectedWorkerIds.includes(w.id);
+                                                                return (
+                                                                    <button
+                                                                        key={w.id}
+                                                                        type="button"
+                                                                        onClick={() => toggleWorker(w.id)}
+                                                                        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 transition-colors ${isChecked ? 'bg-blue-50' : ''}`}
+                                                                    >
+                                                                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                                                                            {isChecked && <FiCheck className="w-2.5 h-2.5 text-white" />}
+                                                                        </div>
+                                                                        {w.avatar ? (
+                                                                            <img src={w.avatar} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                                                                        ) : (
+                                                                            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                                                                <FiUser className="w-4 h-4 text-gray-400" />
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="text-sm font-semibold text-gray-900 truncate">{wName}</p>
+                                                                            {w.email && <p className="text-xs text-gray-400 truncate">{w.email}</p>}
+                                                                            {w.profession && <p className="text-xs text-blue-500 capitalize truncate">{w.profession}</p>}
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                    {selectedWorkersInDropdown.length > 0 && (
+                                                        <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                                                            <span className="text-xs text-gray-500">
+                                                                {selectedWorkersInDropdown.length} sélectionné{selectedWorkersInDropdown.length > 1 ? 's' : ''}
+                                                            </span>
+                                                            <button type="button"
+                                                                onClick={() => setWorkerDropdownOpen(false)}
+                                                                className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                Confirmer
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {errors.selectedWorkerIds && (
+                                        <p className="mt-1 text-xs text-red-600">{errors.selectedWorkerIds}</p>
+                                    )}
+                                </div>
+                            )}
 
                             <div>
                                 <SectionTitle icon={FiUser} title="Photo de profil" />

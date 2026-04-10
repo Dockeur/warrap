@@ -139,6 +139,7 @@ export interface UserProfile {
 export interface CompleteWorkerProfileData {
     profil: File;
     nationalIDCard: File;
+    worker_user_ids?: string;
     years_of_experience?: number;
     presentation?: string;
     commercial_register?: File | null;
@@ -259,6 +260,7 @@ const workerService = {
             const fd = new FormData();
             fd.append('profil', profileData.profil);
             fd.append('nationalIDCard', profileData.nationalIDCard);
+            if (profileData.worker_user_ids) fd.append('worker_user_ids', profileData.worker_user_ids);
             if (profileData.years_of_experience !== undefined) fd.append('years_of_experience', String(profileData.years_of_experience));
             if (profileData.presentation) fd.append('presentation', profileData.presentation);
             if (profileData.commercial_register) fd.append('commercial_register', profileData.commercial_register);
